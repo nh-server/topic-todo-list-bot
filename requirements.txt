@@ -1,6 +1,7 @@
 setuptools
-discord
+discord~=1.0.1
 asyncpg~=0.20.1
-pyyaml
+pyyaml~=5.4.1
 git+https://github.com/Rapptz/discord-ext-menus
 discord-flags
+logzero~=1.6.3

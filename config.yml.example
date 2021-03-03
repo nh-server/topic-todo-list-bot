@@ -3,3 +3,5 @@ token :
 db : postgres://username:password@domain:port
 
 activity: your complaints
+
+prefix: ')'

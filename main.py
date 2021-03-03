@@ -30,9 +30,10 @@ class StaffToDoList(commands.Bot):
 
     def __init__(self):
         self.loop = asyncio.get_event_loop()
-        super().__init__(command_prefix=")",
+        super().__init__(command_prefix=read_config('prefix'),
+                         description="The bot to handle suggestions from all members of a team!",
                          allow_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False),
-                         intents=discord.Intents().all())
+                         intents=discord.Intents().all(), help_command=commands.MinimalHelpCommand())
 
         self.db = self.loop.run_until_complete(create_pool())
 
@@ -58,7 +59,6 @@ class StaffToDoList(commands.Bot):
     async def on_command_error(self, ctx, error):
         """Handles errors"""
         # handles errors for commands that do not exist
-        print(type(error))
         if isinstance(error, commands.errors.CommandNotFound):
             return
 
@@ -68,17 +68,20 @@ class StaffToDoList(commands.Bot):
                 f"An HTTP {error.original.status} error has occurred for the following reason: `{error.original.text}`")
 
         # handles all bad command usage
-        elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.BadUnionArgument, commands.TooManyArguments)):
+        elif isinstance(error, (
+                commands.MissingRequiredArgument, commands.BadArgument, commands.BadUnionArgument,
+                commands.TooManyArguments)):
             await ctx.send_help(ctx.command)
-
-        # handles command cool downs
-        elif isinstance(error, commands.errors.CommandOnCooldown):
-            await ctx.send("This command was used {:.2f}s ago and is on cooldown. Try again in {:.2f}s.".format(
-                error.cooldown.per - error.retry_after, error.retry_after))
 
         # handles commands that are attempted to be used outside a guild.
         elif isinstance(error, commands.errors.NoPrivateMessage):
             await ctx.send("You cannot use this command outside of a server!")
+
+        elif isinstance(error, commands.PrivateMessageOnly):
+            await ctx.send("You cannot use this command outside of DMs with the bot!")
+
+        elif isinstance(error, commands.MissingPermissions):
+            await ctx.send(error.args[0])
 
         else:
             await ctx.send(f"An error occurred while processing the `{ctx.command.name}` command.")
@@ -92,12 +95,9 @@ class StaffToDoList(commands.Bot):
             print(''.join(tb))
             console_logger.exception(log_msg + "".join(tb) + '\n\n')
 
-
     async def on_ready(self):
         """Loads code on boot"""
         await self.prepare_db()
-        self.load_extension("jishaku")
-        print("jsk has been loaded")
         cog_files = [file[:-3] for file in os.listdir("cogs") if file.endswith(".py")]
         if cog_files:
             for cog in cog_files:
@@ -110,7 +110,8 @@ class StaffToDoList(commands.Bot):
                         f"Failed to load {cog}:\n{''.join(format_exception(type(e), e, e.__traceback__))}")
 
         console_logger.info(f"We are logged in as {self.user.name}!")
-        await self.change_presence(activity=discord.Activity(name=read_config("activity"), type=discord.ActivityType.listening))
+        await self.change_presence(
+            activity=discord.Activity(name=read_config("activity"), type=discord.ActivityType.listening))
 
 
 if __name__ == "__main__":

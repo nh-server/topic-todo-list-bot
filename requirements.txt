@@ -3,5 +3,4 @@ discord
 asyncpg~=0.20.1
 pyyaml
 git+https://github.com/Rapptz/discord-ext-menus
-jishaku
 discord-flags

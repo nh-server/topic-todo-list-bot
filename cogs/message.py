@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, flags
+from utils import YesNoMenu
 
 
 class Message(commands.Cog):
@@ -8,9 +9,8 @@ class Message(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        """Update priority count"""
+    async def react_check(self, payload):
+        """Checks reaction for a thumbs up"""
         if payload.member and payload.member.id == self.bot.user.id:
             return
         guild = self.bot.get_guild(payload.guild_id)
@@ -24,28 +24,19 @@ class Message(commands.Cog):
 
         if payload.emoji.name == "👍":
             message = await channel.get_partial_message(payload.message_id).fetch()
-            plus_one = message.reactions[0]
-            await self.bot.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", plus_one.count, payload.message_id)
+            plus_one = [r for r in message.reactions if r.emoji == "👍"][0]
+            await self.bot.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", plus_one.count,
+                                      payload.message_id)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        """Update priority count"""
+        await self.react_check(payload)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         """Update priority count"""
-        if payload.member and payload.member.id == self.bot.user.id:
-            return
-        guild = self.bot.get_guild(payload.guild_id)
-        if not guild:
-            return
-        output_channel_id = await self.bot.db.fetchval("SELECT output_channel_id FROM settings WHERE guild_id = $1",
-                                                       guild.id)
-        channel = guild.get_channel(output_channel_id)
-        if payload.channel_id != output_channel_id:
-            return
-
-        if payload.emoji.name == "👍":
-            message = await channel.get_partial_message(payload.message_id).fetch()
-            plus_one = message.reactions[0]
-            await self.bot.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", plus_one.count,
-                                      payload.message_id)
+        await self.react_check(payload)
 
     @commands.dm_only()
     @commands.command()
@@ -53,7 +44,7 @@ class Message(commands.Cog):
         """Send a message"""
         guild = self.bot.get_guild(guild_id)
         if not guild:
-            return await ctx.send("Invalid server id given")
+            return await ctx.send("Invalid server ID given")
         member = guild.get_member(ctx.author.id)
         data = await self.bot.db.fetchrow(
             "SELECT output_channel_id, allowed_role_ids FROM settings WHERE guild_id = $1", guild.id)
@@ -79,12 +70,17 @@ class Message(commands.Cog):
             return await ctx.send("Cannot output to channel, cannot find id")
         embed = discord.Embed(title="Topic posted", color=discord.Color.gold())
         embed.description = msg
+        res, confirm_msg = await YesNoMenu(
+            f"Are you sure you want to send this message to {guild.name}? Below is a preview", embed=embed).prompt(ctx)
+        if not res:
+            return await confirm_msg.edit(content="Cancelled")
         posted_message = await channel.send(embed=embed)
         await posted_message.add_reaction("\U0001f44d")
         await self.bot.db.execute(
-            "INSERT INTO todo (guild_id, message, priority_level, message_id, message_link) VALUES ($1, $2, $3, $4, $5)", guild.id, msg,
+            "INSERT INTO todo (guild_id, message, priority_level, message_id, message_link) VALUES ($1, $2, $3, $4, $5)",
+            guild.id, msg,
             1, posted_message.id, f"https://discord.com/channels/{guild.id}/{channel.id}/{posted_message.id}")
-        await ctx.send(f"Topic submitted to {guild.name}")
+        await confirm_msg.edit(content=f"Topic submitted to {guild.name}")
 
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -127,7 +123,8 @@ class Message(commands.Cog):
             return await ctx.send("You cannot use this.")
 
         active_todo_list = await self.bot.db.fetch(
-            "SELECT id, message, priority_level, message_link FROM todo WHERE guild_id = $1 ORDER BY priority_level DESC", ctx.guild.id)
+            "SELECT id, message, priority_level, message_link FROM todo WHERE guild_id = $1 ORDER BY priority_level DESC",
+            ctx.guild.id)
         embed = discord.Embed(title=f"On going issues and suggestions for {ctx.guild.name}",
                               color=discord.Color.orange())
         if active_todo_list:
@@ -138,7 +135,8 @@ class Message(commands.Cog):
                     trucated_message = todo['message']
                 if todo['priority_level'] >= 10:
                     embed.add_field(name=f"**ID: {todo['id']} Priority Level: {todo['priority_level']}**",
-                                    value="**" + trucated_message + f"**\nLink to post: {todo['message_link']}", inline=False)
+                                    value="**" + trucated_message + f"**\nLink to post: {todo['message_link']}",
+                                    inline=False)
                 else:
                     embed.add_field(name=f"ID: {todo['id']} Priority Level: {todo['priority_level']}",
                                     value=f"{trucated_message}\nLink to post: {todo['message_link']}", inline=False)

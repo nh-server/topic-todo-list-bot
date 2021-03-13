@@ -8,12 +8,12 @@ import yaml
 import asyncio
 from logzero import setup_logger
 
-console_logger = setup_logger(name='mainlogs', logfile='logs/main.log', maxBytes=100000)
+console_logger = setup_logger(name='mainlogs', logfile='data/logs/main.log', maxBytes=100000)
 
 
 def read_config(config: str) -> str:
     try:
-        with open("config.yml", "r") as f:
+        with open("data/config.yml", "r") as f:
             loadedYml = yaml.safe_load(f)
             return loadedYml[config]
     except FileNotFoundError:

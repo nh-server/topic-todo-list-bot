@@ -10,8 +10,7 @@ class Settings(commands.Cog):
 
     async def set_guild(self, guild_id: int):
         """Checks if a guild is in the settings database"""
-        if not await self.bot.db.fetchval("SELECT guild_id FROM settings WHERE guild_id = $1", guild_id):
-            await self.bot.db.execute("INSERT INTO settings (guild_id) VALUES ($1)", guild_id)
+        await self.bot.db.guild_add(guild_id)
 
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -30,8 +29,7 @@ class Settings(commands.Cog):
             return await ctx.send("You cannot set a channel outside this server.")
 
         await self.set_guild(ctx.guild.id)
-        await self.bot.db.execute("UPDATE settings SET output_channel_id = $1 WHERE guild_id = $2", channel.id,
-                                  ctx.guild.id)
+        await self.bot.db.guild_channel_add(ctx.guild.id, channel.id)
         await ctx.send(f"Output channel set to: {channel.mention}")
 
     @commands.guild_only()
@@ -41,11 +39,11 @@ class Settings(commands.Cog):
         """Removes the output channel"""
         await self.set_guild(ctx.guild.id)
 
-        if not await self.bot.db.fetchval("SELECT output_channel_id FROM settings WHERE guild_id = $1", ctx.guild.id):
+        if not await self.bot.db.guild_channel_get(ctx.guild.id):
             return await ctx.send("No channel set")
 
         else:
-            await self.bot.db.execute("UPDATE settings SET output_channel_id = NULL WHERE guild_id = $1", ctx.guild.id)
+            await self.bot.db.guild_channel_remove(ctx.guild.id)
             await ctx.send("Channel unset")
 
     @commands.guild_only()
@@ -61,12 +59,9 @@ class Settings(commands.Cog):
     async def role_set(self, ctx, role: discord.Role):
         """Adds a role to the list"""
         await self.set_guild(ctx.guild.id)
-        current_roles = await self.bot.db.fetchval("SELECT allowed_role_ids FROM settings WHERE guild_id = $1",
-                                                   ctx.guild.id)
+        current_roles = await self.bot.db.guild_role_get(ctx.guild.id)
         if not current_roles or not role.id in current_roles:
-            await self.bot.db.execute(
-                "UPDATE settings SET allowed_role_ids = array_append(allowed_role_ids, $1::BIGINT) WHERE guild_id = $2",
-                role.id, ctx.guild.id)
+            await self.bot.db.guild_role_add(ctx.guild.id, role.id)
             await ctx.send(f"{role.name} can now submit messages!")
         else:
             return await ctx.send(f"{role.name} is already registered as an approved role!")
@@ -77,12 +72,9 @@ class Settings(commands.Cog):
     async def role_unset(self, ctx, role: discord.Role):
         """Adds a role to the list"""
         await self.set_guild(ctx.guild.id)
-        current_roles = await self.bot.db.fetchval("SELECT allowed_role_ids FROM settings WHERE guild_id = $1",
-                                                   ctx.guild.id)
+        current_roles = await self.bot.db.guild_role_get(ctx.guild.id)
         if current_roles or role.id in current_roles:
-            await self.bot.db.execute(
-                "UPDATE settings SET allowed_role_ids = array_remove(allowed_role_ids, $1) WHERE guild_id = $2",
-                role.id, ctx.guild.id)
+            await self.bot.db.guild_role_remove(ctx.guild.id, role.id)
             await ctx.send(f"{role.name} can no longer  submit messages.")
         else:
             return await ctx.send(f"{role.name} is not registered.")
@@ -94,8 +86,7 @@ class Settings(commands.Cog):
         """Gets info for the current server"""
         embed = discord.Embed(title=f"Settings for {ctx.guild.name}", description="Current options set",
                               color=discord.Color.dark_blue())
-        data = await self.bot.db.fetchrow(
-            "SELECT output_channel_id, allowed_role_ids FROM settings WHERE guild_id = $1", ctx.guild.id)
+        data = await self.bot.db.guild_get_all(ctx.guild.id)
         channel = "No channel saved!"
         roles = "None saved!"
         if data:

@@ -16,8 +16,7 @@ class Message(commands.Cog):
         guild = self.bot.get_guild(payload.guild_id)
         if not guild:
             return
-        output_channel_id = await self.bot.db.fetchval("SELECT output_channel_id FROM settings WHERE guild_id = $1",
-                                                       guild.id)
+        output_channel_id = await self.bot.db.guild_channel_get(guild.id)
         channel = guild.get_channel(output_channel_id)
         if payload.channel_id != output_channel_id:
             return
@@ -25,8 +24,7 @@ class Message(commands.Cog):
         if payload.emoji.name == "👍":
             message = await channel.get_partial_message(payload.message_id).fetch()
             plus_one = [r for r in message.reactions if r.emoji == "👍"][0]
-            await self.bot.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", plus_one.count,
-                                      payload.message_id)
+            await self.bot.db.message_update(payload.message_id, plus_one.count)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -46,8 +44,7 @@ class Message(commands.Cog):
         if not guild:
             return await ctx.send("Invalid server ID given")
         member = guild.get_member(ctx.author.id)
-        data = await self.bot.db.fetchrow(
-            "SELECT output_channel_id, allowed_role_ids FROM settings WHERE guild_id = $1", guild.id)
+        data = await self.bot.db.guild_get_all(guild.id)
         if not data:
             return await ctx.send(f"Bot is not configured for {guild.name}. Please contact and admin!")
 
@@ -76,10 +73,7 @@ class Message(commands.Cog):
             return await confirm_msg.edit(content="Cancelled")
         posted_message = await channel.send(embed=embed)
         await posted_message.add_reaction("\U0001f44d")
-        await self.bot.db.execute(
-            "INSERT INTO todo (guild_id, message, priority_level, message_id, message_link) VALUES ($1, $2, $3, $4, $5)",
-            guild.id, msg,
-            1, posted_message.id, f"https://discord.com/channels/{guild.id}/{channel.id}/{posted_message.id}")
+        await self.bot.db.message_add(guild.id, msg, 1, posted_message.id, f"https://discord.com/channels/{guild.id}/{channel.id}/{posted_message.id}")
         await confirm_msg.edit(content=f"Topic submitted to {guild.name}")
 
     @commands.guild_only()
@@ -92,7 +86,7 @@ class Message(commands.Cog):
         if not outcome.lower() in ('accept', 'deny'):
             return await ctx.send("Please specify if you are accepting or denying this suggestion")
 
-        db_msg_id = await self.bot.db.fetchval("SELECT id FROM todo WHERE message_id = $1", message.id)
+        db_msg_id = await self.bot.db.message_get(message.id)
 
         embed = message.embeds[0]
         desc = "~~" + embed.description + "~~"
@@ -105,15 +99,14 @@ class Message(commands.Cog):
             embed.color = discord.Color.red()
 
         await message.edit(embed=embed)
-        await self.bot.db.execute("DELETE FROM todo WHERE id = $1", db_msg_id)
+        await self.bot.db.message_remove(db_msg_id)
         await ctx.send(f"Closed topic id {db_msg_id}")
 
     @commands.guild_only()
     @commands.command(name="listopen")
     async def list_open(self, ctx):
         """List current issues that are on the table (Only can be ran by the approved role)"""
-        approved_roles = await self.bot.db.fetchval("SELECT allowed_role_ids FROM settings WHERE guild_id = $1",
-                                                    ctx.guild.id)
+        approved_roles = await self.bot.db.guild_role_get(ctx.guild.id)
         if approved_roles:
             approved_roles = set(approved_roles)
         else:
@@ -122,9 +115,7 @@ class Message(commands.Cog):
         if not has_role:
             return await ctx.send("You cannot use this.")
 
-        active_todo_list = await self.bot.db.fetch(
-            "SELECT id, message, priority_level, message_link FROM todo WHERE guild_id = $1 ORDER BY priority_level DESC",
-            ctx.guild.id)
+        active_todo_list = await self.bot.db.message_get_all(ctx.guild.id)
         embed = discord.Embed(title=f"On going issues and suggestions for {ctx.guild.name}",
                               color=discord.Color.orange())
         if active_todo_list:

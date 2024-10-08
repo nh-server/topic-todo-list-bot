@@ -8,6 +8,9 @@ import yaml
 import asyncio
 from logzero import setup_logger
 
+from utils.sql import SQLDB
+
+
 console_logger = setup_logger(name='mainlogs', logfile='data/logs/main.log', maxBytes=100000)
 
 
@@ -21,10 +24,6 @@ def read_config(config: str) -> str:
         sys.exit(1)
 
 
-async def create_pool():
-    return await asyncpg.create_pool(read_config("db"))
-
-
 class StaffToDoList(commands.Bot):
     """A bot designed to handle incoming messages and anonymously output them to a channel. Then rate them by priority"""
 
@@ -33,25 +32,23 @@ class StaffToDoList(commands.Bot):
                          description="The bot to handle suggestions from all members of a team!",
                          allow_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False),
                          intents=discord.Intents().all(), help_command=commands.MinimalHelpCommand())
+        self.db = SQLDB(self)
 
-    async def prepare_db(self):
-        """Sets up database pool for usage"""
-        async with self.db.acquire() as conn:
-            try:
-                with open("schema.sql", 'r') as schema:
-                    try:
-                        await conn.execute(schema.read())
-                    except asyncpg.PostgresError as e:
-                        console_logger.exception(
-                            "A SQL error has occurred while running the schema, traceback is:\n{}".format("".join(
-                                format_exception(type(e), e, e.__traceback__))))
-                        print(format_exception(type(e), e, e.__traceback__))
-                        sys.exit(-1)
+    async def setup_hook(self) -> None:
+        await self.db.startup()
+        await self.load_cogs()
 
-            except FileNotFoundError:
-                print(
-                    "schema file not found, please check your files, remember to rename schema.sql.example to schema.sql when you would like to use it")
-                sys.exit(-1)
+    async def load_cogs(self):
+        cog_files = [file[:-3] for file in os.listdir("cogs") if file.endswith(".py")]
+        if cog_files:
+            for cog in cog_files:
+                try:
+                    await self.load_extension("cogs." + cog)
+                    console_logger.info(f"{cog} loaded")
+
+                except Exception as e:
+                    console_logger.exception(
+                        f"Failed to load {cog}:\n{''.join(format_exception(type(e), e, e.__traceback__))}")
 
     async def on_command_error(self, ctx, error):
         """Handles errors"""
@@ -94,18 +91,6 @@ class StaffToDoList(commands.Bot):
 
     async def on_ready(self):
         """Loads code on boot"""
-        await self.prepare_db()
-        cog_files = [file[:-3] for file in os.listdir("cogs") if file.endswith(".py")]
-        if cog_files:
-            for cog in cog_files:
-                try:
-                    await self.load_extension("cogs." + cog)
-                    console_logger.info(f"{cog} loaded")
-
-                except Exception as e:
-                    console_logger.exception(
-                        f"Failed to load {cog}:\n{''.join(format_exception(type(e), e, e.__traceback__))}")
-
         console_logger.info(f"We are logged in as {self.user.name}!")
         await self.change_presence(
             activity=discord.Activity(name=read_config("activity"), type=discord.ActivityType.listening))
@@ -113,12 +98,7 @@ class StaffToDoList(commands.Bot):
 
 async def startup():
     bot = StaffToDoList()
-    bot.db = await create_pool()
-    try:
-        await bot.start(read_config("token"))
-    except Exception:
-        print("Unable to log in")
-        sys.exit(1)
+    await bot.start(read_config("token"))
 
 
 if __name__ == "__main__":

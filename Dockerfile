@@ -11,5 +11,6 @@ RUN pip install --no-compile --no-cache-dir -r requirements.txt
 USER intmodmail
 RUN mkdir -p ./data/logs
 RUN touch ./data/logs/main.log
+RUN touch ./data/logs/sql.log
 COPY . .
 CMD ["python3", "main.py"]

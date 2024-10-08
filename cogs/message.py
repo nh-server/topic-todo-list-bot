@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, flags
-from utils import YesNoMenu
+from utils.menu import YesNoMenu
 
 
 class Message(commands.Cog):

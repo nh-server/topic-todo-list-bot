@@ -29,13 +29,10 @@ class StaffToDoList(commands.Bot):
     """A bot designed to handle incoming messages and anonymously output them to a channel. Then rate them by priority"""
 
     def __init__(self):
-        self.loop = asyncio.get_event_loop()
         super().__init__(command_prefix=read_config('prefix'),
                          description="The bot to handle suggestions from all members of a team!",
                          allow_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False),
                          intents=discord.Intents().all(), help_command=commands.MinimalHelpCommand())
-
-        self.db = self.loop.run_until_complete(create_pool())
 
     async def prepare_db(self):
         """Sets up database pool for usage"""
@@ -102,7 +99,7 @@ class StaffToDoList(commands.Bot):
         if cog_files:
             for cog in cog_files:
                 try:
-                    self.load_extension("cogs." + cog)
+                    await self.load_extension("cogs." + cog)
                     console_logger.info(f"{cog} loaded")
 
                 except Exception as e:
@@ -114,10 +111,15 @@ class StaffToDoList(commands.Bot):
             activity=discord.Activity(name=read_config("activity"), type=discord.ActivityType.listening))
 
 
-if __name__ == "__main__":
+async def startup():
     bot = StaffToDoList()
+    bot.db = await create_pool()
     try:
-        bot.run(read_config("token"))
+        await bot.start(read_config("token"))
     except Exception:
         print("Unable to log in")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    asyncio.run(startup())

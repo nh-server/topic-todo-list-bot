@@ -1,29 +1,25 @@
-from discord.ext import menus
+import discord
 
 
-class YesNoMenu(menus.Menu):
-
-    def __init__(self, init_msg: str, embed=None):
-        super().__init__(timeout=30.0)
-        self.msg = init_msg
+class YesNoView(discord.ui.View):
+    def __init__(self, interaction):
+        self.interaction = interaction
+        self.bot = interaction.client
         self.result = None
-        self.embed = embed
+        super().__init__(timeout=60)
 
-    async def send_initial_message(self, ctx, channel):
-        return await channel.send(self.msg, embed=self.embed)
+    async def on_error(self, interaction, exc, item):
+        self.stop()
 
-    @menus.button('\N{WHITE HEAVY CHECK MARK}')
-    async def yes(self, payload):
+    async def on_timeout(self):
+        self.stop()
+
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def yes_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.result = True
-        await self.clear_buttons(react=True)
         self.stop()
 
-    @menus.button('\N{CROSS MARK}')
-    async def no(self, payload):
+    @discord.ui.button(label='No', style=discord.ButtonStyle.red)
+    async def no_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.result = False
-        await self.clear_buttons(react=True)
         self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
-        return self.result, self.message

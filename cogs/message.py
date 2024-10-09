@@ -1,6 +1,7 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
-from utils.menu import YesNoMenu
+from utils.menu import YesNoView
 
 
 class Message(commands.Cog):
@@ -36,45 +37,32 @@ class Message(commands.Cog):
         """Update priority count"""
         await self.react_check(payload)
 
-    @commands.dm_only()
-    @commands.command()
-    async def send(self, ctx, guild_id: int, *, msg):
+    @app_commands.guild_only()
+    @app_commands.command()
+    async def send(self, interaction: discord.Interaction, message: str):
         """Send a message"""
-        guild = self.bot.get_guild(guild_id)
-        if not guild:
-            return await ctx.send("Invalid server ID given")
-        member = guild.get_member(ctx.author.id)
+        guild = interaction.guild
         data = await self.bot.db.guild_get_all(guild.id)
         if not data:
-            return await ctx.send(f"Bot is not configured for {guild.name}. Please contact and admin!")
-
-        has_role = None
-        if data['allowed_role_ids']:
-            guild_role_set = set(member.roles)
-            db_roles = set([guild.get_role(x) for x in data['allowed_role_ids']])
-            res = (db_roles & guild_role_set)
-            if res:
-                has_role = res.pop()
-
-        if not has_role:
-            return await ctx.send(f"You cannot submit topics to {guild.name}")
+            return await interaction.response.send_message(f"Bot is not configured for {guild.name}. Please contact and admin!", ephemeral=True)
 
         if not data['output_channel_id'] or not guild.get_channel(data['output_channel_id']):
-            return await ctx.send(f"Bot is not configured for {guild.name}. Please contact and admin!")
+            return await interaction.response.send_message(f"Bot is not configured for {guild.name}. Please contact and admin!", ephemeral=True)
 
         channel = guild.get_channel(data['output_channel_id'])
         if not channel:
-            return await ctx.send("Cannot output to channel, cannot find id")
+            return await interaction.response.send_message("Cannot output to channel, cannot find id", ephemeral=True)
         embed = discord.Embed(title="Topic posted", color=discord.Color.gold())
-        embed.description = msg
-        res, confirm_msg = await YesNoMenu(
-            f"Are you sure you want to send this message to {guild.name}? Below is a preview", embed=embed).prompt(ctx)
-        if not res:
-            return await confirm_msg.edit(content="Cancelled")
+        embed.description = message
+        view = YesNoView(interaction)
+        await interaction.response.send_message(f"Are you sure you want to send this message to {guild.name}? Below is a preview", embed=embed, view=view, ephemeral=True)
+        await view.wait()
+        if not view.result:
+            return await interaction.edit_original_response(content="Cancelled", view=None)
         posted_message = await channel.send(embed=embed)
         await posted_message.add_reaction("\U0001f44d")
-        await self.bot.db.message_add(guild.id, msg, 1, posted_message.id, f"https://discord.com/channels/{guild.id}/{channel.id}/{posted_message.id}")
-        await confirm_msg.edit(content=f"Topic submitted to {guild.name}")
+        await self.bot.db.message_add(guild.id, message, 1, posted_message.id, f"https://discord.com/channels/{guild.id}/{channel.id}/{posted_message.id}")
+        await interaction.edit_original_response(content=f"Topic submitted to {guild.name}", view=None)
 
     @commands.guild_only()
     @commands.has_permissions(administrator=True)

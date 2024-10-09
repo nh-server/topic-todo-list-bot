@@ -37,6 +37,7 @@ class StaffToDoList(commands.Bot):
     async def setup_hook(self) -> None:
         await self.db.startup()
         await self.load_cogs()
+        await self.tree.sync()
 
     async def load_cogs(self):
         cog_files = [file[:-3] for file in os.listdir("cogs") if file.endswith(".py")]

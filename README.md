@@ -13,11 +13,11 @@ A simple discord bot that allows a team to anonymously submit ideas
 ---
 
 ### Usage
-- Run `)help` to see all commands, or `/` to see available slash commands for the bot.
+- Run `/` to see available slash commands for the bot.
 
     To get set up on your server users with administrator permissions should:
     - Add roles of the users that will be able to submit ideas to the list of approved roles for the `send` command.
-    - Run `)channel set <channel>` to set an output channel, make sure its a private channel that only the whitelisted users can see!
+    - Run `/channel set <channel>` to set an output channel, make sure its a private channel that only the whitelisted users can see!
 
 - If you are a whitelisted user and want to submit an idea, you can do so by doing `/send title:<your message title> message:<your message>` in the server.
     - A confirmation check will be displayed (ephemeral, so invisible to anyone but the user.)

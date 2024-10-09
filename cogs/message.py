@@ -90,21 +90,12 @@ class Message(commands.Cog):
         await self.bot.db.message_remove(db_msg_id)
         await ctx.send(f"Closed topic id {db_msg_id}")
 
-    @commands.guild_only()
-    @commands.command(name="listopen")
-    async def list_open(self, ctx):
-        """List current issues that are on the table (Only can be ran by the approved role)"""
-        approved_roles = await self.bot.db.guild_role_get(ctx.guild.id)
-        if approved_roles:
-            approved_roles = set(approved_roles)
-        else:
-            return await ctx.send("You cannot use this.")
-        has_role = (approved_roles & set([r.id for r in ctx.author.roles]))
-        if not has_role:
-            return await ctx.send("You cannot use this.")
-
-        active_todo_list = await self.bot.db.message_get_all(ctx.guild.id)
-        embed = discord.Embed(title=f"On going issues and suggestions for {ctx.guild.name}",
+    @app_commands.guild_only()
+    @app_commands.command(name="listopen")
+    async def list_open(self, interaction: discord.Interaction):
+        """List current issues that are on the table"""
+        active_todo_list = await self.bot.db.message_get_all(interaction.guild_id)
+        embed = discord.Embed(title=f"On going issues and suggestions for {interaction.guild.name}",
                               color=discord.Color.orange())
         if active_todo_list:
             for todo in active_todo_list:
@@ -122,7 +113,7 @@ class Message(commands.Cog):
         elif len(embed.fields) == 0:
             embed.description = "No open topics!"
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):

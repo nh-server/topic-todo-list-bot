@@ -5,18 +5,20 @@
 #
 
 
+import logging
 import sys
 from traceback import format_exception
 
 import asyncpg
 import yaml
-from logzero import setup_logger
+
+
+console_logger = logging.getLogger("main")
 
 
 class SQLDB():
     def __init__(self, bot):
         self.bot = bot
-        self.console_logger = setup_logger(name='sql', logfile='data/logs/sql.log', maxBytes=100000)
 
     def read_config(self, config: str) -> str:
         try:
@@ -37,7 +39,7 @@ class SQLDB():
                     try:
                         await conn.execute(schema.read())
                     except asyncpg.PostgresError as e:
-                        self.console_logger.exception(
+                        console_logger.exception(
                             "A SQL error has occurred while running the schema, traceback is:\n{}".format("".join(
                                 format_exception(type(e), e, e.__traceback__))))
                         print(format_exception(type(e), e, e.__traceback__))

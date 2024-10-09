@@ -6,12 +6,12 @@ import sys
 from discord.ext import commands
 import yaml
 import asyncio
-from logzero import setup_logger
+import logging
 
 from utils.sql import SQLDB
 
 
-console_logger = setup_logger(name='mainlogs', logfile='data/logs/main.log', maxBytes=100000)
+console_logger = logging.getLogger("main")
 
 
 def read_config(config: str) -> str:
@@ -97,6 +97,10 @@ class StaffToDoList(commands.Bot):
 
 
 async def startup():
+    discord.utils.setup_logging(handler=logging.FileHandler('/data/main.log', encoding='utf-8', mode='w'))
+    # stream handler
+    discord.utils.setup_logging()
+
     bot = StaffToDoList()
     await bot.start(read_config("token"))
 

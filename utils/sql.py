@@ -51,8 +51,7 @@ class SQLDB():
                 sys.exit(-1)
 
     async def message_update(self, message_id, count):
-        await self.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", count,
-                                    message_id)
+        await self.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", count, message_id)
 
     async def message_add(self, guild_id, title, message, message_id):
         await self.db.execute(
@@ -79,12 +78,10 @@ class SQLDB():
             await self.db.execute("INSERT INTO settings (guild_id) VALUES ($1)", guild_id)
 
     async def guild_get_all(self, guild_id):
-        return await self.db.fetchrow(
-            "SELECT output_channel_id, allowed_role_ids FROM settings WHERE guild_id = $1", guild_id)
+        return await self.db.fetchrow("SELECT output_channel_id, allowed_role_ids FROM settings WHERE guild_id = $1", guild_id)
 
     async def guild_channel_add(self, guild_id, channel_id):
-        await self.db.execute("UPDATE settings SET output_channel_id = $1 WHERE guild_id = $2", channel_id,
-                                  guild_id)
+        await self.db.execute("UPDATE settings SET output_channel_id = $1 WHERE guild_id = $2", channel_id, guild_id)
 
     async def guild_channel_get(self, guild_id):
         return await self.db.fetchval("SELECT output_channel_id FROM settings WHERE guild_id = $1", guild_id)
@@ -93,14 +90,12 @@ class SQLDB():
         await self.db.execute("UPDATE settings SET output_channel_id = NULL WHERE guild_id = $1", guild_id)
 
     async def guild_role_get(self, guild_id):
-        return await self.db.fetchval("SELECT allowed_role_ids FROM settings WHERE guild_id = $1",
-                                                   guild_id)
+        return await self.db.fetchval("SELECT allowed_role_ids FROM settings WHERE guild_id = $1", guild_id)
 
     async def guild_role_add(self, guild_id, role_id):
-        await self.db.execute("UPDATE settings SET allowed_role_ids = array_append(allowed_role_ids, $1::BIGINT) WHERE guild_id = $2",
-                role_id, guild_id)
+        await self.db.execute(
+            "UPDATE settings SET allowed_role_ids = array_append(allowed_role_ids, $1::BIGINT) WHERE guild_id = $2", role_id, guild_id)
 
     async def guild_role_remove(self, guild_id, role_id):
         await self.db.execute(
-                "UPDATE settings SET allowed_role_ids = array_remove(allowed_role_ids, $1) WHERE guild_id = $2",
-                role_id, guild_id)
+            "UPDATE settings SET allowed_role_ids = array_remove(allowed_role_ids, $1) WHERE guild_id = $2", role_id, guild_id)

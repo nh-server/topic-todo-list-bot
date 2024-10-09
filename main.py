@@ -1,12 +1,12 @@
 import os
-from traceback import format_exception
-import asyncpg
-import discord
 import sys
-from discord.ext import commands
-import yaml
+from traceback import format_exception
+
 import asyncio
+import discord
+from discord.ext import commands
 import logging
+import yaml
 
 from utils.sql import SQLDB
 

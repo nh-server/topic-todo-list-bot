@@ -60,7 +60,7 @@ class Settings(commands.Cog):
         """Adds a role to the list"""
         await self.set_guild(ctx.guild.id)
         current_roles = await self.bot.db.guild_role_get(ctx.guild.id)
-        if not current_roles or not role.id in current_roles:
+        if not current_roles or role.id not in current_roles:
             await self.bot.db.guild_role_add(ctx.guild.id, role.id)
             await ctx.send(f"{role.name} can now submit messages!")
         else:

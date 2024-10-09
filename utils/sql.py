@@ -54,19 +54,21 @@ class SQLDB():
         await self.db.execute("UPDATE todo SET priority_level = $1 WHERE message_id = $2", count,
                                     message_id)
 
-    async def message_add(self, guild_id, message, priority_level, message_id, message_link):
+    async def message_add(self, guild_id, title, message, message_id):
         await self.db.execute(
-            "INSERT INTO todo (guild_id, message, priority_level, message_id, message_link) VALUES ($1, $2, $3, $4, $5)",
-            guild_id, message,
-            1, message_id, message_link)
+            "INSERT INTO todo (guild_id, title, message, priority_level, message_id) VALUES ($1, $2, $3, $4, $5)",
+            guild_id, title, message, 1, message_id)
 
     async def message_get_all(self, guild_id):
         return await self.db.fetch(
-            "SELECT id, message, priority_level, message_link FROM todo WHERE guild_id = $1 ORDER BY priority_level DESC",
+            "SELECT id, title, message, priority_level, message_id FROM todo WHERE guild_id = $1 ORDER BY priority_level DESC",
             guild_id)
 
-    async def message_get(self, message_id):
-        return await self.db.fetchval("SELECT id FROM todo WHERE message_id = $1", message_id)
+    async def message_get_by_message(self, message_id):
+        return await self.db.fetchrow("SELECT id, title, message, priority_level, message_id FROM todo WHERE message_id = $1", message_id)
+
+    async def message_get_by_id(self, id):
+        return await self.db.fetchrow("SELECT id, title, message, priority_level, message_id FROM todo WHERE id = $1", id)
 
     async def message_remove(self, message_id):
         await self.db.execute("DELETE FROM todo WHERE id = $1", message_id)

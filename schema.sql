@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS todo
 (
-    id SERIAL,
+    id SERIAL PRIMARY KEY,
     guild_id BIGINT,
+    title TEXT,
     message TEXT,
     priority_level INT,
     message_id BIGINT,

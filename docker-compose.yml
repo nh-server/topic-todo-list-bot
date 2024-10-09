@@ -2,6 +2,8 @@ version: "3.8"
 services:
   db:
     image: postgres:13
+    volumes:
+      - topicdb:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: internal
       POSTGRES_PASSWORD: modmailrules
@@ -18,3 +20,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+volumes:
+  topicdb:

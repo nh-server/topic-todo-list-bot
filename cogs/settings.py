@@ -19,10 +19,6 @@ class Settings(commands.Cog):
     @output_channel.command(name="set")
     async def channel_set(self, interaction, channel: discord.TextChannel):
         """Sets an output channel"""
-        # check if channel exists in db
-        if channel not in interaction.guild.channels:
-            return await interaction.response.send_message("You cannot set a channel outside this server.", ephemeral=True)
-
         await self.set_guild(interaction.guild_id)
         await self.bot.db.guild_channel_add(interaction.guild_id, channel.id)
         await interaction.response.send_message(f"Output channel set to: {channel.mention}", ephemeral=True)

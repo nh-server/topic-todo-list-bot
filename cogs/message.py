@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, flags
+from discord.ext import commands
 from utils.menu import YesNoMenu
 
 

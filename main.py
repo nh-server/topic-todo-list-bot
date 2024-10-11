@@ -31,7 +31,7 @@ class StaffToDoList(commands.Bot):
         super().__init__(command_prefix=read_config('prefix'),
                          description="The bot to handle suggestions from all members of a team!",
                          allow_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False),
-                         intents=discord.Intents().all(), help_command=commands.MinimalHelpCommand())
+                         intents=discord.Intents().all(), help_command=None)
         self.db = SQLDB(self)
 
     async def setup_hook(self) -> None:

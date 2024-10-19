@@ -1,4 +1,4 @@
-*.yml
+data/config.yml
 __pycache__
 venv
 *.log

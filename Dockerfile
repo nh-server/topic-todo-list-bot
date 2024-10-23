@@ -5,7 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV HOME /home/intmodmail
 RUN useradd -m -d $HOME -s /bin/sh intmodmail
 WORKDIR $HOME
-RUN apt-get update && apt-get install git -y
 COPY ./requirements.txt .
 RUN pip install --no-compile --no-cache-dir -r requirements.txt
 USER intmodmail
